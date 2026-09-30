@@ -71,6 +71,10 @@
   .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #1b1b1b; color: var(--texto); }
   .leaflet-container { font-family: var(--corpo); }
   .vazio { color: var(--texto-3); padding: 20px; text-align: center; }
+  .seletor-mapa { display: flex; gap: 4px; background: rgba(12,12,12,.82); padding: 4px; border-radius: 10px; border: 1px solid var(--linha); }
+  .seletor-mapa button { background: transparent; color: var(--texto-2); border: 0; border-radius: 7px; padding: 6px 9px; font: 600 12px var(--corpo); cursor: pointer; white-space: nowrap; }
+  .seletor-mapa button[aria-pressed="true"] { background: var(--marca); color: #fff; }
+  .seletor-mapa button:hover { color: #fff; }
   @media (max-width: 900px) { .grade { grid-template-columns: 1fr; } #mapa { height: 62vh; } .lista { max-height: none; } }
   @media (max-width: 600px) {
     .pagina { padding: 22px 12px 40px; gap: 16px; }
@@ -82,6 +86,7 @@
     .base { padding: 10px 12px; }
     .contas li { font-size: 13px; }
     .contas .tags { display: block; margin-left: 18px; }
+    .seletor-mapa button { padding: 5px 6px; font-size: 11px; }
   }
   @media (hover: none) { .base:hover { background: var(--superficie); } }
 </style>
@@ -144,7 +149,37 @@ const PEQUENA = matchMedia('(max-width: 600px)').matches;
 const mapa = L.map('mapa', {crs: L.CRS.Simple, minZoom: -7, maxZoom: 2, zoomSnap: 0.25, attributionControl: false,
                             scrollWheelZoom: !L.Browser.mobile, tapTolerance: 20});
 const limites = [[0, 0], [LADO, LADO]];
-L.imageOverlay('mapa.jpg', limites).addTo(mapa);
+const FUNDOS = {relevo: L.imageOverlay('mapa.jpg', limites), topo: L.imageOverlay('mapa_topo.jpg', limites)};
+let fundo = 'relevo';
+try { if (localStorage.getItem('fundo') in FUNDOS) fundo = localStorage.getItem('fundo'); } catch (e) {}
+FUNDOS[fundo].addTo(mapa);
+let baseAberta = null;
+const Seletor = L.Control.extend({
+  options: {position: 'topright'},
+  onAdd() {
+    const div = L.DomUtil.create('div', 'seletor-mapa');
+    div.innerHTML = '<button data-f="relevo">🗻 Relevo</button><button data-f="topo">🗺️ Topográfico</button>'
+      + '<button data-f="sat" title="Abre o satélite no site do iZurvive, no ponto que você está vendo">🛰️ Satélite ↗</button>';
+    L.DomEvent.disableClickPropagation(div);
+    const marcar = () => div.querySelectorAll('[data-f]').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === fundo));
+    div.addEventListener('click', ev => {
+      const f = ev.target.closest('button')?.dataset.f;
+      if (!f) return;
+      if (f === 'sat') {
+        const c = baseAberta ? {lng: baseAberta.x, lat: baseAberta.z} : mapa.getCenter();
+        window.open(`https://www.izurvive.com/chernarusplussatmap/#location=${c.lng.toFixed(1)};${c.lat.toFixed(1)}`, '_blank', 'noopener');
+        return;
+      }
+      if (f === fundo) return;
+      mapa.removeLayer(FUNDOS[fundo]); fundo = f; FUNDOS[fundo].addTo(mapa); FUNDOS[fundo].bringToBack();
+      try { localStorage.setItem('fundo', fundo); } catch (e) {}
+      marcar();
+    });
+    marcar();
+    return div;
+  }
+});
+new Seletor().addTo(mapa);
 mapa.fitBounds(limites);
 let mexeu = false;
 mapa.on('dragstart zoomstart', () => { mexeu = true; });
@@ -178,7 +213,8 @@ function desenhar() {
     const redondo = b.com_bandeira, sumida = b.situacao === 'sumiu' || b.situacao === 'sumindo';
     const html = `<div class="marca-base" style="width:24px;height:24px;background:${cor(b)};border-radius:${redondo ? '50%' : '4px'};${sumida ? 'outline:2px solid #ff3030' : ''}">${b.num}</div>`;
     const m = L.marker([b.z, b.x], {icon: L.divIcon({className: '', html, iconSize: [24, 24], iconAnchor: [12, 12]})})
-      .bindPopup(popup(b), {maxWidth: PEQUENA ? 250 : 320, autoPanPadding: [12, 12]}).addTo(camadaBases);
+      .bindPopup(popup(b), {maxWidth: PEQUENA ? 250 : 320, autoPanPadding: [12, 12]})
+      .on('popupopen', () => { baseAberta = b; }).on('popupclose', () => { if (baseAberta === b) baseAberta = null; }).addTo(camadaBases);
     marcas[b.num] = m;
   }
   lista.innerHTML = vis.length ? vis.map(b => {
