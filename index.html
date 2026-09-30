@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0c0c0c">
+<title>Bases Sentinela</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Outfit:wght@300;400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root {
+    color-scheme: dark;
+    --fundo: #0c0c0c; --superficie: #151515; --superficie-2: #1c1c1c; --linha: rgba(255,255,255,.09);
+    --texto: #f2f0ee; --texto-2: #a9a6a3; --texto-3: #6f6c69; --marca: #ff3e3e;
+    --ok: #7fd08a; --alerta: #ffc83d; --perigo: #ff5a5a;
+    --display: 'Black Ops One', Impact, 'Arial Narrow', sans-serif;
+    --corpo: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--fundo); color: var(--texto); font: 400 15px/1.5 var(--corpo); }
+  body { background-image: radial-gradient(ellipse at 15% 0%, rgba(139,0,0,.22) 0%, transparent 45%); background-attachment: fixed; }
+  .pagina { max-width: 1400px; margin: 0 auto; padding: 32px 16px 56px; display: flex; flex-direction: column; gap: 22px; }
+  header { display: flex; flex-direction: column; gap: 8px; }
+  .sobre { font-size: 12px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--texto-2); display: flex; align-items: center; gap: 10px; }
+  .sobre::before { content: ""; width: 26px; height: 2px; background: var(--marca); }
+  h1 { margin: 0; font: 400 clamp(2.4rem, 8vw, 4.6rem)/.95 var(--display); letter-spacing: .02em; }
+  h1 span { color: var(--marca); }
+  .lead { margin: 0; color: var(--texto-2); max-width: 70ch; }
+  .numeros { display: flex; flex-wrap: wrap; gap: 10px; }
+  .num { background: var(--superficie); border: 1px solid var(--linha); border-radius: 10px; padding: 10px 14px; min-width: 120px; }
+  .num b { display: block; font: 400 28px/1 var(--display); }
+  .num small { color: var(--texto-2); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  .atualizado { font: 500 12px var(--mono); color: var(--texto-3); }
+  .barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .barra button { background: var(--superficie-2); color: var(--texto-2); border: 1px solid var(--linha); border-radius: 999px; padding: 7px 14px; font: 600 13px var(--corpo); cursor: pointer; }
+  .barra button[aria-pressed="true"] { background: var(--marca); color: #fff; border-color: var(--marca); }
+  .barra input { flex: 1 1 220px; min-width: 0; background: var(--superficie); border: 1px solid var(--linha); color: var(--texto); border-radius: 999px; padding: 8px 14px; font: 400 14px var(--corpo); }
+  .grade { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+  #mapa { height: min(78vh, 820px); border-radius: 14px; border: 1px solid var(--linha); background: #0b1a26; }
+  .lista { display: flex; flex-direction: column; gap: 10px; max-height: min(78vh, 820px); overflow: auto; padding-right: 4px; }
+  .base { background: var(--superficie); border: 1px solid var(--linha); border-left: 5px solid var(--cor); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+  .base:hover { background: var(--superficie-2); }
+  .topo { display: flex; gap: 10px; align-items: center; }
+  .selo { flex: none; width: 30px; height: 30px; display: grid; place-items: center; background: var(--cor); color: #000; font: 700 14px var(--corpo); }
+  .selo.redondo { border-radius: 50%; box-shadow: 0 0 0 2px #fff inset; }
+  .selo.quadrado { border-radius: 4px; }
+  .selo.sumiu { background: #777; position: relative; }
+  .selo.sumiu::after { content: "✕"; position: absolute; color: #ff3030; font-size: 24px; }
+  .lugar { font-weight: 700; color: var(--cor); }
+  .meta { font: 500 12px var(--mono); color: var(--texto-3); }
+  .situacao { font-size: 13px; margin: 6px 0 4px; }
+  .situacao.ok { color: var(--ok); } .situacao.vencendo { color: var(--alerta); } .situacao.sumiu, .situacao.sumindo { color: var(--perigo); }
+  .contas { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .contas li { font-size: 14px; }
+  .contas .tags { color: var(--cor); font-size: 12px; margin-left: 6px; }
+  .contas .dono { font-weight: 700; }
+  h2 { margin: 8px 0 0; font: 400 26px var(--display); letter-spacing: .03em; }
+  .tempo { display: flex; flex-direction: column; gap: 8px; }
+  .evento { background: var(--superficie); border: 1px solid var(--linha); border-radius: 10px; padding: 10px 14px; }
+  .evento b { font-weight: 600; }
+  .evento .quando { font: 500 12px var(--mono); color: var(--texto-3); margin-right: 8px; }
+  .evento p { margin: 4px 0 0; color: var(--texto-2); font-size: 13px; }
+  .evento a, .base a, .leaflet-popup-content a { color: #8ab4ff; }
+  footer { color: var(--texto-3); font-size: 13px; border-top: 1px solid var(--linha); padding-top: 16px; }
+  .rotulo-cidade { color: #e9e6df; font: 600 11px var(--corpo); text-shadow: 0 0 3px #000, 0 0 6px #000; white-space: nowrap; }
+  .marca-base { display: grid; place-items: center; color: #000; font: 700 12px var(--corpo); border: 2px solid #fff; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #1b1b1b; color: var(--texto); }
+  .leaflet-container { font-family: var(--corpo); }
+  .vazio { color: var(--texto-3); padding: 20px; text-align: center; }
+  @media (max-width: 900px) { .grade { grid-template-columns: 1fr; } #mapa { height: 62vh; } .lista { max-height: none; } }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <header>
+    <div class="sobre">Brasil Veteranos · DayZ Xbox</div>
+    <h1>BASES <span>SENTINELA</span></h1>
+    <p class="lead">Todas as bases do servidor, com e sem bandeira, quem constrói e quem frequenta cada uma. Atualizado sozinho pelo bot Sentinela a partir do registro do servidor.</p>
+    <div class="numeros" id="numeros"></div>
+    <div class="atualizado" id="atualizado">carregando…</div>
+  </header>
+
+  <div class="barra" role="group" aria-label="Filtro">
+    <button data-filtro="todas" aria-pressed="true">Todas</button>
+    <button data-filtro="bandeira" aria-pressed="false">Com bandeira</button>
+    <button data-filtro="sem" aria-pressed="false">Sem bandeira</button>
+    <button data-filtro="sumidas" aria-pressed="false">Sumindo / sumiram</button>
+    <input id="busca" type="search" placeholder="Procurar gamertag ou lugar…" aria-label="Procurar gamertag ou lugar">
+  </div>
+
+  <div class="grade">
+    <div id="mapa"></div>
+    <div class="lista" id="lista"></div>
+  </div>
+
+  <h2>Linha do tempo</h2>
+  <div class="tempo" id="tempo"></div>
+
+  <footer>
+    Base = obras e objetos colocados no mesmo lugar (registro do servidor desde 16/09/2026). As contas de cada base são evidência do registro (construir, entrar/sair do jogo ali, ficar ali, mesmo clã), não prova de dono.
+    Sem bandeira as peças somem 7 dias depois da última mexida; a bandeira segura a base por até 40 dias depois de hasteada. O Xbox não deixa ler o que existe no mapa: “sumiu” é estimativa pelo tempo. Horário de Brasília. Mapa gerado a partir do relevo do próprio jogo.
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const PAL = ['#e63946','#ff9f1c','#ffd60a','#2ec4b6','#3a86ff','#8338ec','#ff006e','#06d6a0','#fb5607','#00b4d8',
+             '#c77dff','#90be6d','#ff70a6','#70d6ff','#e9d8a6','#b4b4b4','#ffffff','#aaff00','#ff8cb4','#78a0ff'];
+const CIDADES = [["Chernogorsk",6600,2600],["Elektrozavodsk",10300,2200],["Berezino",12400,9600],["Kamenka",1900,2250],
+  ["Komarovo",3600,2400],["Balota",4450,2450],["Prigorodki",7900,3300],["Kamyshovo",12000,3500],["Solnichniy",13300,6300],
+  ["Nizhnoye",12900,8100],["Svetlojarsk",13900,13200],["Novodmitrovsk",11500,14500],["Krasnostav",11200,12300],
+  ["NEAF",12000,12650],["NWAF",4600,10300],["Tisy",1700,14000],["Zelenogorsk",2700,5200],["Stary Sobor",6100,7700],
+  ["Novy Sobor",7100,7700],["Vybor",3800,8900],["Grishino",6000,10300],["Gorka",9500,8900],["Polana",10700,8100],
+  ["Mogilevka",7500,5200],["Staroye",10100,5400],["Dolina",11300,6600],["Pavlovo",1700,3800],["Myshkino",1900,7300],
+  ["Lopatino",2700,9900],["Severograd",7900,12600],["Gvozdno",8500,11900],["Olsha",13300,12900],["Khelm",12300,10800],
+  ["Pogorevka",4500,6400],["Pulkovo",4900,5600],["Nadezhdino",5800,4700]];
+const LADO = 15363.75;
+const cor = b => (b.situacao === 'sumiu' || b.situacao === 'sumindo') ? '#777777' : PAL[(b.num - 1) % PAL.length];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function brasilia(s) {            // "2026-09-29 21:40:04" no relógio do servidor (UTC-4) -> dd/mm HH:MM Brasília
+  if (!s) return '';
+  const d = new Date(s.replace(' ', 'T') + '-04:00');
+  return d.toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
+}
+const diaBr = s => brasilia(s).split(',')[0].split(' ')[0];
+
+const mapa = L.map('mapa', {crs: L.CRS.Simple, minZoom: -4, maxZoom: 2, zoomSnap: 0.25, attributionControl: false});
+const limites = [[0, 0], [LADO, LADO]];
+L.imageOverlay('mapa.jpg', limites).addTo(mapa);
+mapa.fitBounds(limites);
+const camadaCidades = L.layerGroup(CIDADES.map(([n, x, z]) =>
+  L.marker([z, x], {interactive: false, icon: L.divIcon({className: 'rotulo-cidade', html: esc(n), iconSize: null})}))).addTo(mapa);
+const camadaBases = L.layerGroup().addTo(mapa);
+let dados = {bases: []}, filtro = 'todas', marcas = {};
+
+function passa(b) {
+  const q = document.getElementById('busca').value.trim().toLowerCase();
+  if (filtro === 'bandeira' && !b.com_bandeira) return false;
+  if (filtro === 'sem' && b.com_bandeira) return false;
+  if (filtro === 'sumidas' && !['sumiu', 'sumindo', 'vencendo'].includes(b.situacao)) return false;
+  if (!q) return true;
+  return b.lugar.toLowerCase().includes(q) || b.contas.some(c => c.nome.toLowerCase().includes(q));
+}
+function popup(b) {
+  const contas = b.contas.slice(0, 10).map(c => `<div>${c.bandeira ? '🚩 <b>' : '• '}${esc(c.nome)}${c.bandeira ? '</b>' : ''} <span style="color:${cor(b)};font-size:12px">${esc(c.tags.join(' · '))}</span></div>`).join('');
+  return `<b style="color:${cor(b)}">${b.num}. ${esc(b.lugar)}</b><br><span style="font-size:12px">${esc(b.detalhe)}</span>
+    <div style="font:500 11px monospace;color:#999;margin:4px 0">X ${Math.round(b.x)} / Z ${Math.round(b.z)} · ${b.n} obras</div>${contas}
+    <div style="margin-top:6px"><a href="${esc(b.link)}" target="_blank" rel="noopener">ver no iZurvive</a></div>`;
+}
+function desenhar() {
+  camadaBases.clearLayers(); marcas = {};
+  const lista = document.getElementById('lista');
+  const vis = dados.bases.filter(passa);
+  for (const b of vis) {
+    const redondo = b.com_bandeira, sumida = b.situacao === 'sumiu' || b.situacao === 'sumindo';
+    const html = `<div class="marca-base" style="width:24px;height:24px;background:${cor(b)};border-radius:${redondo ? '50%' : '4px'};${sumida ? 'outline:2px solid #ff3030' : ''}">${b.num}</div>`;
+    const m = L.marker([b.z, b.x], {icon: L.divIcon({className: '', html, iconSize: [24, 24], iconAnchor: [12, 12]})})
+      .bindPopup(popup(b), {maxWidth: 320}).addTo(camadaBases);
+    marcas[b.num] = m;
+  }
+  lista.innerHTML = vis.length ? vis.map(b => {
+    const sumida = b.situacao === 'sumiu' || b.situacao === 'sumindo';
+    const contas = b.contas.slice(0, 8).map(c =>
+      `<li class="${c.bandeira ? 'dono' : ''}">${c.bandeira ? '🚩' : '•'} ${esc(c.nome)}<span class="tags">${esc(c.tags.join(' · '))}</span></li>`).join('');
+    const extra = b.desmontes_de_fora ? ` · ${b.desmontes_de_fora} desmontes de gente de fora` : '';
+    return `<article class="base" style="--cor:${cor(b)}" data-num="${b.num}">
+      <div class="topo"><div class="selo ${b.com_bandeira ? 'redondo' : 'quadrado'} ${sumida ? 'sumiu' : ''}">${sumida ? '' : b.num}</div>
+      <div><div class="lugar">${b.num}. ${esc(b.lugar)}</div>
+      <div class="meta">X ${Math.round(b.x)} / Z ${Math.round(b.z)} · ${b.n} obras · ${diaBr(b.primeira)} a ${diaBr(b.ultima_obra)}</div></div></div>
+      <div class="situacao ${b.situacao}">${esc(b.detalhe)}${esc(extra)}</div>
+      <ul class="contas">${contas}${b.contas.length > 8 ? `<li style="color:var(--texto-3)">+${b.contas.length - 8} contas</li>` : ''}</ul>
+    </article>`;
+  }).join('') : '<div class="vazio">Nenhuma base com esse filtro.</div>';
+  lista.querySelectorAll('.base').forEach(el => el.addEventListener('click', () => {
+    const b = dados.bases.find(x => x.num == el.dataset.num);
+    mapa.flyTo([b.z, b.x], 0.5); marcas[b.num].openPopup();
+  }));
+  const tot = dados.bases.length, band = dados.bases.filter(b => b.com_bandeira).length;
+  const sum = dados.bases.filter(b => ['sumiu', 'sumindo'].includes(b.situacao)).length;
+  document.getElementById('numeros').innerHTML = [[tot, 'bases'], [band, 'com bandeira'], [tot - band, 'sem bandeira'], [sum, 'sumindo / sumiram']]
+    .map(([v, t]) => `<div class="num"><b>${v}</b><small>${t}</small></div>`).join('');
+}
+function linhaDoTempo(ev) {
+  const el = document.getElementById('tempo');
+  el.innerHTML = ev.length ? ev.slice(0, 60).map(e => `<div class="evento"><span class="quando">${esc(brasilia(e.quando))}</span><b>${esc(e.titulo)}</b>
+    ${e.link ? ` · <a href="${esc(e.link)}" target="_blank" rel="noopener">mapa</a>` : ''}<p>${(e.linhas || []).map(esc).join(' · ')}</p></div>`).join('')
+    : '<div class="vazio">Sem novidades ainda. Base nova, bandeira hasteada/abaixada, raid e base sumindo aparecem aqui.</div>';
+}
+async function carregar() {
+  try {
+    const [b, e] = await Promise.all([fetch('data/bases.json?t=' + Date.now()).then(r => r.json()),
+                                      fetch('data/eventos.json?t=' + Date.now()).then(r => r.json()).catch(() => [])]);
+    dados = b; desenhar(); linhaDoTempo(e);
+    document.getElementById('atualizado').textContent = 'Dados de ' + brasilia(b.atualizado) + ' (Brasília) · atualiza sozinho a cada 15 min';
+  } catch (err) {
+    document.getElementById('atualizado').textContent = 'Não consegui carregar os dados agora. Tente de novo em alguns minutos.';
+  }
+}
+document.querySelectorAll('[data-filtro]').forEach(bt => bt.addEventListener('click', () => {
+  filtro = bt.dataset.filtro;
+  document.querySelectorAll('[data-filtro]').forEach(x => x.setAttribute('aria-pressed', x === bt));
+  desenhar();
+}));
+document.getElementById('busca').addEventListener('input', desenhar);
+carregar();
+setInterval(carregar, 5 * 60 * 1000);
+</script>
+</body>
+</html>
