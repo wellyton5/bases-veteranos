@@ -72,6 +72,18 @@
   .leaflet-container { font-family: var(--corpo); }
   .vazio { color: var(--texto-3); padding: 20px; text-align: center; }
   @media (max-width: 900px) { .grade { grid-template-columns: 1fr; } #mapa { height: 62vh; } .lista { max-height: none; } }
+  @media (max-width: 600px) {
+    .pagina { padding: 22px 12px 40px; gap: 16px; }
+    #mapa { height: 52vh; min-height: 320px; }
+    .num { min-width: 0; flex: 1 1 calc(50% - 10px); padding: 8px 10px; }
+    .num b { font-size: 22px; }
+    .barra button { padding: 6px 11px; font-size: 12px; }
+    .barra input { flex-basis: 100%; }
+    .base { padding: 10px 12px; }
+    .contas li { font-size: 13px; }
+    .contas .tags { display: block; margin-left: 18px; }
+  }
+  @media (hover: none) { .base:hover { background: var(--superficie); } }
 </style>
 </head>
 <body>
@@ -128,10 +140,17 @@ function brasilia(s) {            // "2026-09-29 21:40:04" no relógio do servid
 }
 const diaBr = s => brasilia(s).split(',')[0].split(' ')[0];
 
-const mapa = L.map('mapa', {crs: L.CRS.Simple, minZoom: -4, maxZoom: 2, zoomSnap: 0.25, attributionControl: false});
+const PEQUENA = matchMedia('(max-width: 600px)').matches;
+const mapa = L.map('mapa', {crs: L.CRS.Simple, minZoom: -7, maxZoom: 2, zoomSnap: 0.25, attributionControl: false,
+                            scrollWheelZoom: !L.Browser.mobile, tapTolerance: 20});
 const limites = [[0, 0], [LADO, LADO]];
 L.imageOverlay('mapa.jpg', limites).addTo(mapa);
 mapa.fitBounds(limites);
+let mexeu = false;
+mapa.on('dragstart zoomstart', () => { mexeu = true; });
+const reenquadrar = () => { mapa.invalidateSize(); if (!mexeu) mapa.fitBounds(limites, {animate: false}); };
+addEventListener('resize', () => setTimeout(reenquadrar, 150));
+addEventListener('orientationchange', () => setTimeout(reenquadrar, 400));
 const camadaCidades = L.layerGroup(CIDADES.map(([n, x, z]) =>
   L.marker([z, x], {interactive: false, icon: L.divIcon({className: 'rotulo-cidade', html: esc(n), iconSize: null})}))).addTo(mapa);
 const camadaBases = L.layerGroup().addTo(mapa);
@@ -159,7 +178,7 @@ function desenhar() {
     const redondo = b.com_bandeira, sumida = b.situacao === 'sumiu' || b.situacao === 'sumindo';
     const html = `<div class="marca-base" style="width:24px;height:24px;background:${cor(b)};border-radius:${redondo ? '50%' : '4px'};${sumida ? 'outline:2px solid #ff3030' : ''}">${b.num}</div>`;
     const m = L.marker([b.z, b.x], {icon: L.divIcon({className: '', html, iconSize: [24, 24], iconAnchor: [12, 12]})})
-      .bindPopup(popup(b), {maxWidth: 320}).addTo(camadaBases);
+      .bindPopup(popup(b), {maxWidth: PEQUENA ? 250 : 320, autoPanPadding: [12, 12]}).addTo(camadaBases);
     marcas[b.num] = m;
   }
   lista.innerHTML = vis.length ? vis.map(b => {
@@ -177,7 +196,9 @@ function desenhar() {
   }).join('') : '<div class="vazio">Nenhuma base com esse filtro.</div>';
   lista.querySelectorAll('.base').forEach(el => el.addEventListener('click', () => {
     const b = dados.bases.find(x => x.num == el.dataset.num);
-    mapa.flyTo([b.z, b.x], 0.5); marcas[b.num].openPopup();
+    mexeu = true;
+    if (PEQUENA) document.getElementById('mapa').scrollIntoView({behavior: 'smooth', block: 'start'});
+    mapa.flyTo([b.z, b.x], PEQUENA ? -0.5 : 0.5); setTimeout(() => marcas[b.num].openPopup(), 400);
   }));
   const tot = dados.bases.length, band = dados.bases.filter(b => b.com_bandeira).length;
   const sum = dados.bases.filter(b => ['sumiu', 'sumindo'].includes(b.situacao)).length;
